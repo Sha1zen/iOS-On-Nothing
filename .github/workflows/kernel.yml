@@ -1,0 +1,69 @@
+name: xnu-bcm2837-kernel
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'platform/**'
+      - 'scripts/ci/**'
+      - 'docs/**'
+  workflow_dispatch:
+
+jobs:
+  kernel:
+    runs-on: macos-15
+    env:
+      # Source repos (upstream for now; flip to our own forks after Phase 0)
+      XNU_FORK_URL: https://github.com/anurodhp/xnu-pi3-macos11
+      XNU_FORK_BRANCH: bcm2837-bringup
+      MACOS_MANIFEST: macos-112
+    steps:
+      - name: Checkout our repo (CI scripts, docs)
+        uses: actions/checkout@v4
+
+      - name: Checkout reference hub (tools/, runvm.sh, iokit/)
+        uses: actions/checkout@v4
+        with:
+          repository: anurodhp/xnu-iokit-pi3
+          path: refhub
+
+      - name: Checkout XNU fork → third_party/xnu-7195
+        run: |
+          mkdir -p refhub/third_party
+          git -C refhub/third_party clone --branch "$XNU_FORK_BRANCH" \
+            "$XNU_FORK_URL" xnu-7195
+
+      - name: Warn on XNU target version drift
+        run: |
+          cd refhub/third_party/xnu-7195
+          echo "Kernel tree version: $(grep -h 'Filename:' doc/relnotes.txt 2>/dev/null | head -1 || true)"
+          git log -1 --format='XNU fork HEAD: %h %s'
+
+      - name: Prepare SDK copy + ctf tools (dtrace)
+        run: bash "$GITHUB_WORKSPACE/scripts/ci/mac-prepare.sh" "$GITHUB_WORKSPACE/refhub"
+
+      - name: Patch SDKVERSION/PLATFORMPATH in build script for runner's Xcode
+        run: |
+          cd refhub/tools
+          SDKVERSION="$(xcrun --sdk iphoneos --show-sdk-version)"
+          PLATFORMPATH="$(xcrun --sdk iphoneos --show-sdk-platform-path)"
+          sed -i.bak \
+            -e "s|^\\(\s*SDKVERSION=\\).*|\\1$SDKVERSION \\\\|" \
+            -e "s|^\\(\s*PLATFORMPATH=\\).*|\\1$PLATFORMPATH \\\\|" \
+            build_xnu_7195.sh
+          sed -n '45,60p' build_xnu_7195.sh
+
+      - name: Build XNU (ARM64, BCM2837, DEVELOPMENT)
+        run: |
+          cd refhub
+          ./tools/build_xnu_7195.sh
+
+      - name: Upload kernel artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: xnu-bcm2837-kernel
+          path: |
+            refhub/build/xnu-latest-build/out/kernel.development.bcm2837-7195.unstripped
+            refhub/third_party/xnu-7195/BUILD/obj/DEVELOPMENT_ARM64_BCM2837/*
+          retention-days: 14
+          if-no-files-found: error
