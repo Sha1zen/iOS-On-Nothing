@@ -26,32 +26,28 @@ rm -rf "$SDK_DIR"
 cp -a "$SDK_PATH" "$SDK_DIR"
 
 # ---- 2. ctf tools from Apple dtrace -----------------------------------------
-# dtrace tag must come from the same manifest vintage as xnu-7195 (macOS 11.2).
-DTRACE_TAG="$(python3 -c '
-import json, urllib.request, sys
-urls = [
-    "https://raw.githubusercontent.com/apple-oss-distributions/distribution-macOS/'"$MACOS_MANIFEST"'/manifest.json",
-]
-data = None
-for u in urls:
-    try:
-        data = json.load(urllib.request.urlopen(u, timeout=30))
-        break
-    except Exception:
-        pass
-if not data:
-    sys.exit("could not fetch manifest")
-entry = data.get("dtrace") or data.get("Dtrace")
-if isinstance(entry, dict):
-    entry = entry.get("tag") or entry.get("version")
-print(entry)
-')"
-echo "Using dtrace tag: $DTRACE_TAG"
-
+# dtrace revision must come from the same manifest vintage as xnu-7195:
+# apple-oss-distributions/distribution-macOS at tag `macos-112` is a
+# super-project whose submodule pointer pins the exact dtrace commit.
 DTRACE_DIR="$BUILD_ROOT/dtrace-src"
+DIST_DIR="$BUILD_ROOT/dist-manifest"
+if [ ! -d "$DIST_DIR" ]; then
+  git clone -q --depth 1 --branch "${MACOS_MANIFEST:-macos-112}" \
+    https://github.com/apple-oss-distributions/distribution-macOS.git "$DIST_DIR"
+fi
+DTRACE_SHA="$(git -C "$DIST_DIR" ls-tree HEAD dtrace | awk '{print $3}')"
+if [ -z "${DTRACE_SHA}" ]; then
+  echo "no dtrace submodule pointer under distribution-macOS ${MACOS_MANIFEST}" >&2
+  exit 1
+fi
+echo "Using dtrace pin: $DTRACE_SHA"
+
 if [ ! -d "$DTRACE_DIR" ]; then
-  git clone -q --depth 1 --branch "$DTRACE_TAG" \
-    https://github.com/apple-oss-distributions/dtrace.git "$DTRACE_DIR"
+  git init -q "$DTRACE_DIR"
+  git -C "$DTRACE_DIR" remote add origin \
+    https://github.com/apple-oss-distributions/dtrace.git
+  git -C "$DTRACE_DIR" fetch -q --depth 1 origin "$DTRACE_SHA"
+  git -C "$DTRACE_DIR" checkout -q FETCH_HEAD
 fi
 
 BIN_DIR="$BUILD_ROOT/dtrace/dst/usr/local/bin"
