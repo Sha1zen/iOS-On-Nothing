@@ -49,6 +49,16 @@ jobs:
           if [ ! -e "$SDKDIR/iPhoneOS.sdk" ]; then
             sudo ln -s "$SDKDIR"/iPhoneOS*.sdk "$SDKDIR/iPhoneOS.sdk"
           fi
+          # belt & suspenders: rewrite the hard-coded export in every hub
+          # tool (generate_driverkit_headers.sh is one of many)
+          sed -i.bak 's#^export DEVELOPER_DIR=.*#export DEVELOPER_DIR="$(xcode-select -p)"#' \
+            "$GITHUB_WORKSPACE/refhub/tools/"*.sh
+          # probe: does the hard-coded path resolve now?
+          if [ -x /Applications/Xcode-12.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/iig ]; then
+            echo "symlink probe: OK"
+          else
+            echo "symlink probe: FAIL (will rely on sed)"
+          fi
           ls "$DEV/Toolchains/XcodeDefault.xctoolchain/usr/bin/iig"
 
       - name: Clone third_party dependency tree (https remotes)
