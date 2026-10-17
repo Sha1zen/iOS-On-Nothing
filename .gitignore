@@ -1,0 +1,8 @@
+/reference/
+/third_party/
+/build/
+*.img
+*.bin
+*.dmg
+qemu/
+._*
