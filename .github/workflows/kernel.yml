@@ -40,6 +40,13 @@ jobs:
           echo "Kernel tree version: $(grep -h 'Filename:' doc/relnotes.txt 2>/dev/null | head -1 || true)"
           git log -1 --format='XNU fork HEAD: %h %s'
 
+      - name: Clone third_party dependency tree (https remotes)
+        run: |
+          sed -i.bak 's#git@github.com:#https://github.com/#g' \
+            "$GITHUB_WORKSPACE/refhub/setup_third_party.sh"
+          cd "$GITHUB_WORKSPACE/refhub"
+          ./setup_third_party.sh
+
       - name: Prepare SDK copy + ctf tools (dtrace)
         run: bash "$GITHUB_WORKSPACE/scripts/ci/mac-prepare.sh" "$GITHUB_WORKSPACE/refhub"
 
