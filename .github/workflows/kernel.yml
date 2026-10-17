@@ -40,6 +40,17 @@ jobs:
           echo "Kernel tree version: $(grep -h 'Filename:' doc/relnotes.txt 2>/dev/null | head -1 || true)"
           git log -1 --format='XNU fork HEAD: %h %s'
 
+      - name: Satisfy hard-coded Xcode-12 paths (symlink to active Xcode)
+        run: |
+          DEV="$(xcode-select -p)"
+          echo "active Xcode: $DEV"
+          sudo ln -sfn "$DEV" /Applications/Xcode-12.app
+          SDKDIR="$DEV/Platforms/iPhoneOS.platform/Developer/SDKs"
+          if [ ! -e "$SDKDIR/iPhoneOS.sdk" ]; then
+            sudo ln -s "$SDKDIR"/iPhoneOS*.sdk "$SDKDIR/iPhoneOS.sdk"
+          fi
+          ls "$DEV/Toolchains/XcodeDefault.xctoolchain/usr/bin/iig"
+
       - name: Clone third_party dependency tree (https remotes)
         run: |
           sed -i.bak 's#git@github.com:#https://github.com/#g' \
