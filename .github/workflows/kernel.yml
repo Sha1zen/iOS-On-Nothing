@@ -44,6 +44,9 @@ jobs:
         run: |
           sed -i.bak 's#git@github.com:#https://github.com/#g' \
             "$GITHUB_WORKSPACE/refhub/setup_third_party.sh"
+          # xnu-pi3-latest no longer exists upstream; it is only needed by
+          # tools/build_xnu_latest.sh, not by the 7195 build we ship.
+          sed -i.bak '/^xnu-latest|/d' "$GITHUB_WORKSPACE/refhub/setup_third_party.sh"
           cd "$GITHUB_WORKSPACE/refhub"
           ./setup_third_party.sh
 
