@@ -6,3 +6,4 @@
 *.dmg
 qemu/
 ._*
+/platform/
