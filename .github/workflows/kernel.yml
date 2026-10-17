@@ -50,6 +50,10 @@ jobs:
           # their REPOS table has in-band comment lines the loop does not
           # strip; fresh clones die on them ("# IOAudioFamily-300.6.1 …")
           sed -i.bak '/^# /d' "$GITHUB_WORKSPACE/refhub/setup_third_party.sh"
+          # header-gen hard-codes a local Xcode-12 install; point it at
+          # whatever Xcode the runner selected (iig ships with Xcode 16)
+          sed -i.bak 's#^export DEVELOPER_DIR=.*#export DEVELOPER_DIR="$(xcode-select -p)"#' \
+            "$GITHUB_WORKSPACE/refhub/tools/generate_driverkit_headers.sh"
           cd "$GITHUB_WORKSPACE/refhub"
           ./setup_third_party.sh
 
