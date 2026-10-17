@@ -47,6 +47,9 @@ jobs:
           # xnu-pi3-latest no longer exists upstream; it is only needed by
           # tools/build_xnu_latest.sh, not by the 7195 build we ship.
           sed -i.bak '/^xnu-latest|/d' "$GITHUB_WORKSPACE/refhub/setup_third_party.sh"
+          # their REPOS table has in-band comment lines the loop does not
+          # strip; fresh clones die on them ("# IOAudioFamily-300.6.1 …")
+          sed -i.bak '/^# /d' "$GITHUB_WORKSPACE/refhub/setup_third_party.sh"
           cd "$GITHUB_WORKSPACE/refhub"
           ./setup_third_party.sh
 
