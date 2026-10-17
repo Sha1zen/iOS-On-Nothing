@@ -11,7 +11,7 @@ on:
 
 jobs:
   kernel:
-    runs-on: macos-15
+    runs-on: macos-13
     env:
       # Source repos (upstream for now; flip to our own forks after Phase 0)
       XNU_FORK_URL: https://github.com/anurodhp/xnu-pi3-macos11
